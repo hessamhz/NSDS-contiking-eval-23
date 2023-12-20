@@ -57,7 +57,7 @@ PROCESS(udp_server_process, "UDP server");
 AUTOSTART_PROCESSES(&udp_server_process);
 /*---------------------------------------------------------------------------*/
 
-void new_receiver(unsigned receiver){
+void new_receiver(uip_ipaddr_t receiver){
   unsigned i;
   for (i=0; i<next_receiver; i++) {
     if (uip_ipaddr_cmp(&receivers[i], &receiver)) {
@@ -96,7 +96,7 @@ udp_rx_callback(struct simple_udp_connection *c,
   float average;
   float sum = 0;
   unsigned no = 0;  
-  for (i=0; i<MAX_READINGS; i++) {
+  for (unsigned i=0; i<MAX_READINGS; i++) {
     if (readings[i]!=0){
       sum = sum+readings[i];
       no++;
