@@ -9,8 +9,8 @@
 #define LOG_LEVEL LOG_LEVEL_INFO
 
 #define WITH_SERVER_REPLY  1
-#define UDP_CLIENT_PORT	8765
-#define UDP_SERVER_PORT	5678
+#define UDP_CLIENT_PORT 8765
+#define UDP_SERVER_PORT 5678
 
 static struct simple_udp_connection udp_conn;
 
@@ -53,7 +53,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
   static unsigned int retry_counter = 0;
   // total average until now
   static float batched_average = 0;
-  static readingsWhileDisconnected[MAX_READINGS];
+  static float readingsWhileDisconnected[MAX_READINGS];
 
   PROCESS_BEGIN();
 
@@ -72,7 +72,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
     // Check if we can send or not, if not we add to the counter and average the temperature
     if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dst_ipaddr)) {
       if (retry_counter > 0) {
-        for (i=0; i<MAX_READINGS; i++) {
+        for (unsigned i=0; i<MAX_READINGS; i++) {
           if (readingsWhileDisconnected[i]){
             batched_average += readingsWhileDisconnected[i];
           }
@@ -87,7 +87,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
         LOG_INFO_("\n");
         simple_udp_sendto(&udp_conn, &temperature, sizeof(batched_average), &dst_ipaddr);
         // reset the value of sending queue
-        for (i=0; i<MAX_READINGS; i++) {
+        for (unsigned i=0; i<MAX_READINGS; i++) {
           readingsWhileDisconnected[i] = 0;
         }
         batched_average = 0;
@@ -116,4 +116,4 @@ PROCESS_THREAD(udp_client_process, ev, data)
 
   PROCESS_END();
 }
-/*---------------------------------------------------------------------------*/s
+/*---------------------------------------------------------------------------*/
