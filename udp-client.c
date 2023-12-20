@@ -68,7 +68,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
      //etimer_reset(&et);
     // Get the temperature
-    unsigned temperature=get_temperature();
+    float temperature=get_temperature();
     // Check if we can send or not, if not we add to the counter and average the temperature
     if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dst_ipaddr)) {
       if (retry_counter > 0) {
@@ -82,7 +82,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
         } else {
           batched_average = batched_average / retry_counter;
         }
-        LOG_INFO("Sending temperature %u to ", temperature);
+        LOG_INFO("Sending temperature %f to ", temperature);
         LOG_INFO_6ADDR(&dst_ipaddr);
         LOG_INFO_("\n");
         simple_udp_sendto(&udp_conn, &temperature, sizeof(batched_average), &dst_ipaddr);
