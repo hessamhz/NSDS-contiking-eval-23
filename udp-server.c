@@ -50,7 +50,7 @@ static struct simple_udp_connection udp_conn;
 static float readings[MAX_READINGS];
 static unsigned next_reading=0;
 
-static unsigned receivers[MAX_RECEIVERS];
+static uip_ipaddr_t receivers[MAX_RECEIVERS];
 static unsigned next_receiver=0;
 
 PROCESS(udp_server_process, "UDP server");
