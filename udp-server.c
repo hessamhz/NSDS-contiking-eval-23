@@ -47,12 +47,28 @@
 
 static struct simple_udp_connection udp_conn;
 
-static unsigned readings[MAX_READINGS];
+static float readings[MAX_READINGS];
 static unsigned next_reading=0;
+
+static unsigned receivers[MAX_RECEIVERS];
+static unsigned next_receiver=0;
 
 PROCESS(udp_server_process, "UDP server");
 AUTOSTART_PROCESSES(&udp_server_process);
 /*---------------------------------------------------------------------------*/
+
+void new_receiver(unsigned receiver){
+  unsigned i;
+  for (i=0; i<next_receiver; i++) {
+    if (uip_ipaddr_cmp(&receivers[i], &receiver)) {
+      return;
+    }
+
+    }
+    uip_ipaddr_copy(&receivers[next_receiver], &receiver);
+    next_receiver++;
+}
+
 static void
 udp_rx_callback(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
@@ -62,8 +78,13 @@ udp_rx_callback(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
-  unsigned reading = // ...
+  float reading = *(float *)data;
 
+  LOG_INFO("Received reading %f from ", reading);
+
+  if(next_receiver<MAX_RECEIVERS){
+    new_receiver(*sender_addr);
+  }
 
   /* Add reading */
   readings[next_reading++] = reading;
@@ -73,7 +94,7 @@ udp_rx_callback(struct simple_udp_connection *c,
 
   /* Compute average */
   float average;
-  unsigned sum = 0;
+  float sum = 0;
   unsigned no = 0;  
   for (i=0; i<MAX_READINGS; i++) {
     if (readings[i]!=0){
@@ -81,11 +102,8 @@ udp_rx_callback(struct simple_udp_connection *c,
       no++;
     }
   }
-  average = ((float)sum)/no;
+  average = (sum)/no;
   LOG_INFO("Current average is %f \n",average);
-
-  /// ...
-  
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_server_process, ev, data)
@@ -104,6 +122,13 @@ PROCESS_THREAD(udp_server_process, ev, data)
   /* Initialize UDP connection */
   simple_udp_register(&udp_conn, UDP_SERVER_PORT, NULL,
                       UDP_CLIENT_PORT, udp_rx_callback);
+
+    /* Initialize event */
+
+    while(1) {
+      PROCESS_WAIT_EVENT();
+    }
+
   
   PROCESS_END();
 }

@@ -24,10 +24,10 @@ static struct simple_udp_connection udp_conn;
 PROCESS(udp_client_process, "UDP client");
 AUTOSTART_PROCESSES(&udp_client_process);
 /*---------------------------------------------------------------------------*/
-static unsigned
+static float
 get_temperature()
 {
-  static unsigned fake_temps [FAKE_TEMPS] = {30, 25, 20, 15, 10};
+  static float fake_temps [FAKE_TEMPS] = {30, 25, 20, 15, 10};
   return fake_temps[random_rand() % FAKE_TEMPS];
   
 }
@@ -41,11 +41,19 @@ udp_rx_callback(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
-  // ...
+  LOG_INFO("Received init response" );
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_client_process, ev, data)
 {
+  // Initializing timers udp vars
+  static struct etimer et;
+  uip_ipaddr_t dst_ipaddr;
+  // how many times it could not set the average temperature
+  static unsigned int retry_counter = 0;
+  // total average until now
+  static float batched_average = 0;
+  static readingsWhileDisconnected[MAX_READINGS];
 
   PROCESS_BEGIN();
 
@@ -53,7 +61,58 @@ PROCESS_THREAD(udp_client_process, ev, data)
   simple_udp_register(&udp_conn, UDP_CLIENT_PORT, NULL,
                       UDP_SERVER_PORT, udp_rx_callback);
 
-  //...
+
+  etimer_set(&et, SEND_INTERVAL);
+
+  while(1) {
+    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
+     //etimer_reset(&et);
+    // Get the temperature
+    unsigned temperature=get_temperature();
+    // Check if we can send or not, if not we add to the counter and average the temperature
+    if(NETSTACK_ROUTING.node_is_reachable() && NETSTACK_ROUTING.get_root_ipaddr(&dst_ipaddr)) {
+      if (retry_counter > 0) {
+        for (i=0; i<MAX_READINGS; i++) {
+          if (readingsWhileDisconnected[i]){
+            batched_average += readingsWhileDisconnected[i];
+          }
+        }
+        if(retry_counter > MAX_READINGS) {
+          batched_average = batched_average / MAX_READINGS;
+        } else {
+          batched_average = batched_average / retry_counter;
+        }
+        LOG_INFO("Sending temperature %u to ", temperature);
+        LOG_INFO_6ADDR(&dst_ipaddr);
+        LOG_INFO_("\n");
+        simple_udp_sendto(&udp_conn, &temperature, sizeof(batched_average), &dst_ipaddr);
+        // reset the value of sending queue
+        for (i=0; i<MAX_READINGS; i++) {
+          readingsWhileDisconnected[i] = 0;
+        }
+        batched_average = 0;
+        retry_counter = 0;
+      }
+      // sending the temp
+      LOG_INFO("Sending temperature %u to ", temperature);
+      LOG_INFO_6ADDR(&dst_ipaddr);
+      LOG_INFO_("\n");
+      simple_udp_sendto(&udp_conn, &temperature, sizeof(temperature), &dst_ipaddr);
+    } else {
+      LOG_INFO("Not reachable yet\n");
+      // calculating the average
+      if(retry_counter == 0) {
+        readingsWhileDisconnected[0] = temperature;
+        retry_counter++;
+      }
+      else {
+        // replacing the array if we have more than MAX_READINGS
+        readingsWhileDisconnected[(retry_counter % MAX_READINGS)] = temperature;
+        retry_counter++;
+      }
+    }
+    etimer_reset(&et);
+  }
 
   PROCESS_END();
 }
