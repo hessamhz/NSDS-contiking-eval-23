@@ -94,7 +94,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
         retry_counter = 0;
       }
       // sending the temp
-      LOG_INFO("Sending temperature %u to ", temperature);
+      LOG_INFO("Sending temperature %f to ", temperature);
       LOG_INFO_6ADDR(&dst_ipaddr);
       LOG_INFO_("\n");
       simple_udp_sendto(&udp_conn, &temperature, sizeof(temperature), &dst_ipaddr);
