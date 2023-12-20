@@ -93,17 +93,17 @@ udp_rx_callback(struct simple_udp_connection *c,
   }
 
   /* Compute average */
-  float average;
-  float sum = 0;
-  unsigned no = 0;  
+  static float average;
+  static float sum = 0;
+  static unsigned no = 0;  
   for (unsigned i=0; i<MAX_READINGS; i++) {
     if (readings[i]!=0){
-      sum = sum+readings[i];
+      sum = sum + readings[i];
       no++;
     }
   }
   average = (sum)/no;
-  LOG_INFO("Current average is %f \n",average);
+  LOG_INFO("Current average is %f \n", average);
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_server_process, ev, data)
